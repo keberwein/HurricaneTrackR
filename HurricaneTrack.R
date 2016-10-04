@@ -1,16 +1,10 @@
 # Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
 # Requires devtools::install_github('rstudio/leaflet')
 
-library(XML)
-library(plyr)
-library(leaflet)
-library(stringi)
-library(htmltools)
-library(htmlwidgets)
-library(RColorBrewer)
-library(rvest)
-library(geojsonio)
-library(foreign)
+# Check for required packages, install them if not installed
+pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
+for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
+for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 
 stormname = "MATTHEW"
 
@@ -24,6 +18,9 @@ getCurrentAdv <- function(stormname) {
 
     adv <- regmatches(links$title, regexpr('#[0-9]+[A-Z]?', links$title))
     adv <- sub("#0?", "", adv)
+
+    print(paste("Current advisory", adv, sep = " "))
+
     return(adv)
 }
 
@@ -69,7 +66,7 @@ getStorm <- function(stormname) {
     unlink(dir(td))
     setwd(wd)
 
-    save.image("/tmp/NOAA_GIS.RData")
+    save.image("/tmp/NOAA_GIS.Rdata")
 }
 
 # load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
@@ -123,6 +120,6 @@ m <- # create leaflet map.
     ) %>%
     addLegend("bottomright", colors = pal, labels = ss)
 
-html_print(m)
+#html_print(m)
 
-saveWidget(m, '/tmp/trackr.html', selfcontained = TRUE)
+saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
