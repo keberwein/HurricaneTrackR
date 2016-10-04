@@ -7,6 +7,8 @@ for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.pack
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm(p, pkgs)
 
+library(leaflet)
+
 stormname = "MATTHEW"
 
 getCurrentAdv <- function(stormname) {
@@ -146,5 +148,4 @@ m <- # create leaflet map
     addLegend("topright", colors = pal, labels = ss, title = title)
 
 html_print(m)
-
 #saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
