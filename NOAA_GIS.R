@@ -5,7 +5,6 @@ library(foreign)
 library(XML)
 
 wd <- getwd()
-
 td <- tempdir()
 setwd(td)
 
@@ -14,9 +13,11 @@ gis_doc <- xmlParse(gis_at)
 links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
 
 # keep only Advisory shapefile links
-links <- links[grep("Advisory[ #0-9A-Z]+ Forecast \\[shp\\]", links$title),]
+links <- links[grep("Advisory [#0-9A-Z]+ Forecast \\[shp\\]", links$title),]
 # cleanup titles for menu
 links$title <- gsub('\\[shp\\] ', "", links$title)
+# add advisory number
+links$advisory <- regmatches(links$title, regexpr('#[0-9]+[A-Z]?', links$title))
 
 ## interactive storm selection
 #l <- select.list(links$title, title="Select storm:", graphics = FALSE)
