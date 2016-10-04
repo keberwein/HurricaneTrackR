@@ -95,6 +95,8 @@ storm$status <- paste(storm$TCDVLP, storm$SSNUM, sep='-')
 storm$color <- as.character(factor(storm$status, levels = ss, labels = pal))
 storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
+title = paste("Advisory", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
+
 m <- # create leaflet map.
     leaflet(data=storm, width=1024, height=768) %>%
     addTiles() %>%
@@ -108,20 +110,19 @@ m <- # create leaflet map.
     addGeoJSON(lin, fill = FALSE) %>%
     addCircleMarkers(~LON, ~LAT, radius = ~SSNUM * 4, stroke = TRUE, color = ~color,
                      opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
-                     popup = ~sprintf("<b>Advisory forecast %s: %s</b><hr noshade size='1'/>
-                                      Time: %s %s<br/>
-                                      Position: %3.2f, %3.2f<br/>
+                     popup = ~sprintf("Time: %s %s<br/>
                                       Status: <strong>%s</strong><br/>
+                                      Position: %3.2f, %3.2f<br/>
                                       Wind: %s kts<br/>
                                       Gust: %s kts",
-                                      htmlEscape(ADVISNUM), htmlEscape(format(advisory, "%b %d %H:%M")),
                                       htmlEscape(DATELBL), htmlEscape(TIMEZONE),
-                                      htmlEscape(LON), htmlEscape(LAT),
                                       htmlEscape(status),
-                                      htmlEscape(MAXWIND), htmlEscape(GUST))
+                                      htmlEscape(LON), htmlEscape(LAT),
+                                      htmlEscape(MAXWIND),
+                                      htmlEscape(GUST))
 
     ) %>%
-    addLegend("bottomright", colors = pal, labels = ss)
+    addLegend("topright", colors = pal, labels = ss, title = title)
 
 html_print(m)
 
