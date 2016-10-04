@@ -2,9 +2,10 @@
 # Requires devtools::install_github('rstudio/leaflet')
 
 # Check for required packages, install them if not installed
-pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
+pkgs <-c('XML', 'plyr', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
 for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
+rm(p, pkgs)
 
 stormname = "MATTHEW"
 
@@ -32,24 +33,25 @@ getStorm <- function(stormname) {
 
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
-    links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
+    links <<- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
 
-    # keep only Advisory shapefile links
-    links <- links[grep("Advisory [#0-9A-Z]+ Forecast \\[shp\\]", links$title),]
+    # get advisory shapefile links
+    adv <- links[grep("Advisory [#0-9A-Z]+ Forecast \\[shp\\]", links$title),]
     # cleanup titles for menu
-    links$title <- gsub('\\[shp\\] ', "", links$title)
+    adv$title <- gsub('\\[shp\\] ', "", adv$title)
     # add advisory number
-    links$advisory <- regmatches(links$title, regexpr('#[0-9]+[A-Z]?', links$title))
+    adv$advisory <- regmatches(adv$title, regexpr('#[0-9]+[A-Z]?', adv$title))
 
     ## interactive storm selection
-    #l <- select.list(links$title, title="Select storm:", graphics = FALSE)
-    #links$link[links$title == l]
+    #l <- select.list(adv$title, title="Select storm:", graphics = FALSE)
+    #adv$link[adv$title == l]
 
-    url <- links$link[grep(stormname, links$title)]
+    url <- adv$link[grep(stormname, adv$title)]
 
     temp <- tempfile(fileext = ".zip")
     download.file(url, temp)
     unzip(temp)
+    unlink(temp)
 
     d <- dir(td, "*_5day_pts.dbf$")
     l <- dir(td, "*_5day_lin.shp$")
@@ -63,22 +65,40 @@ getStorm <- function(stormname) {
     shp <<- file_to_geojson(s, method='local', output=':memory:')
     ww  <<- file_to_geojson(w, method='local', output=':memory:')
 
-    rm (d, l, p, s, w, gis_at, gis_doc, links)
+    rm(d, l, p, s, w, gis_at, gis_doc, adv)
+
+    # get wind shapefile links
+    wnd <- links[grep("Advisory [#0-9A-Z]+ Wind Field \\[shp\\]", links$title),]
+    url <- wnd$link[grep(stormname, wnd$title)]
+
+    temp <- tempfile(fileext = ".zip")
+    download.file(url, temp)
+    unzip(temp)
     unlink(temp)
+
+    d <- dir(td, "*_forecastradii.dbf$")
+    s <- dir(td, "*_forecastradii.shp$")
+
+    wind <<- read.dbf(d)
+    radii <<- file_to_geojson(s, method='local', output=':memory:')
+
+    rm(d, s, wnd)
+
     unlink(dir(td))
     setwd(wd)
 
     save.image("/tmp/NOAA_GIS.Rdata")
 }
 
+
 # load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
-adv <- getCurrentAdv(stormname)
+advnum <- getCurrentAdv(stormname)
 if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
 } else {
     load("/tmp/NOAA_GIS.Rdata")
     # repull GIS data if not current
-    if (adv != storm$ADVISNUM[1]) {
+    if (advnum != storm$ADVISNUM[1]) {
         getStorm(stormname)
     } else {
         print("Using exsiting GIS data")
@@ -97,7 +117,7 @@ storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
 title = paste("Advisory", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
 
-m <- # create leaflet map.
+m <- # create leaflet map
     leaflet(data=storm, width=1024, height=768) %>%
     addTiles() %>%
     addWMSTiles(
@@ -106,6 +126,7 @@ m <- # create leaflet map.
         options = WMSTileOptions(format = "image/png", transparent = TRUE)
     ) %>%
     addGeoJSON(ww, color = 'red', fill = FALSE) %>%
+    addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
     addGeoJSON(lin, fill = FALSE) %>%
     addCircleMarkers(~LON, ~LAT, radius = ~SSNUM * 4, stroke = TRUE, color = ~color,
