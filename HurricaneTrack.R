@@ -1,7 +1,7 @@
 # Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
 # Requires devtools::install_github('rstudio/leaflet')
 
-library(xml2)
+library(XML)
 library(plyr)
 library(leaflet)
 library(stringi)
