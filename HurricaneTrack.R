@@ -55,13 +55,15 @@ getStorm <- function(stormname) {
     l <- dir(td, "*_5day_lin.shp$")
     p <- dir(td, "*_5day_pts.shp$")
     s <- dir(td, "*_5day_pgn.shp$")
+    w <- dir(td, "*_wwlin.shp$")
 
     storm <<- read.dbf(d)
     lin <<- file_to_geojson(l, method='local', output=':memory:')
     pts <<- file_to_geojson(p, method='local', output=':memory:')
     shp <<- file_to_geojson(s, method='local', output=':memory:')
+    ww  <<- file_to_geojson(w, method='local', output=':memory:')
 
-    rm (d, l, p, s, gis_at, gis_doc, links)
+    rm (d, l, p, s, w, gis_at, gis_doc, links)
     unlink(temp)
     unlink(dir(td))
     setwd(wd)
@@ -101,6 +103,7 @@ m <- # create leaflet map.
         layers = "nexrad-n0r-900913",
         options = WMSTileOptions(format = "image/png", transparent = TRUE)
     ) %>%
+    addGeoJSON(ww, color = 'red', fill = FALSE) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
     addGeoJSON(lin, fill = FALSE) %>%
     addCircleMarkers(~LON, ~LAT, radius = ~SSNUM * 4, stroke = TRUE, color = ~color,
@@ -120,6 +123,6 @@ m <- # create leaflet map.
     ) %>%
     addLegend("bottomright", colors = pal, labels = ss)
 
-#html_print(m)
+html_print(m)
 
-saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
+#saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
