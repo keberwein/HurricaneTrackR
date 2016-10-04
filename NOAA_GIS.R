@@ -44,4 +44,4 @@ unlink(temp)
 unlink(dir(td))
 setwd(wd)
 
-save.image("NOAA_GIS.RData")
+save.image("/tmp/NOAA_GIS.RData")
