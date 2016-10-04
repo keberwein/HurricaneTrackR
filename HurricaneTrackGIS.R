@@ -20,9 +20,7 @@ pal <- colorRampPalette(c("blue", "green", "yellow", "orange", "red", "darkred",
 storm <- storm[order(storm$TAU),]
 
 storm$status <- paste(storm$TCDVLP, storm$SSNUM, sep='-')
-
 storm$color <- as.character(factor(storm$status, levels = ss, labels = pal))
-
 storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
 m <- # Create leaflet map.
@@ -34,14 +32,15 @@ m <- # Create leaflet map.
         options = WMSTileOptions(format = "image/png", transparent = TRUE)
     ) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
-    addGeoJSON(lin) %>%
+    addGeoJSON(lin, fill = FALSE) %>%
     addCircleMarkers(~LON, ~LAT, radius = ~SSNUM * 4, stroke = TRUE, color = ~color,
                      opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
                      popup = ~sprintf("<b>Advisory forecast %s: %s</b><hr noshade size='1'/>
                                       Time: %s %s<br/>
                                       Position: %3.2f, %3.2f<br/>
                                       Status: <strong>%s</strong><br/>
-                                      Wind: %s<br/>Gust: %s (knots)",
+                                      Wind: %s kts<br/>
+                                      Gust: %s kts",
                                       htmlEscape(ADVISNUM), htmlEscape(format(advisory, "%b %d %H:%M")),
                                       htmlEscape(DATELBL), htmlEscape(TIMEZONE),
                                       htmlEscape(LON), htmlEscape(LAT),

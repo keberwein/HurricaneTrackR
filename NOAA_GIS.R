@@ -2,28 +2,45 @@
 
 library(geojsonio)
 library(foreign)
-
-url <- "http://www.nhc.noaa.gov/gis/forecast/archive/al142016_5day_latest.zip"
+library(XML)
 
 wd <- getwd()
+
 td <- tempdir()
 setwd(td)
+
+gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
+gis_doc <- xmlParse(gis_at)
+links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
+
+# keep only Advisory shapefile links
+links <- links[grep("Advisory[ #0-9A-Z]+ Forecast \\[shp\\]", links$title),]
+# cleanup titles for menu
+links$title <- gsub('\\[shp\\] ', "", links$title)
+
+## interactive storm selection
+#l <- select.list(links$title, title="Select storm:", graphics = FALSE)
+#links$link[links$title == l]
+
+url <- links$link[grep('MATTHEW', links$title)]
 
 temp <- tempfile(fileext = ".zip")
 download.file(url, temp)
 unzip(temp)
 
-s <- dir(td, "*_5day_pgn.shp$")
-l <- dir(td, "*_5day_lin.shp$")
 d <- dir(td, "*_5day_pts.dbf$")
-
-shp <- file_to_geojson(s, method='local', output=':memory:')
-lin <- file_to_geojson(l, method='local', output=':memory:')
+l <- dir(td, "*_5day_lin.shp$")
+p <- dir(td, "*_5day_pts.shp$")
+s <- dir(td, "*_5day_pgn.shp$")
 
 storm <- read.dbf(d)
+lin <- file_to_geojson(l, method='local', output=':memory:')
+pts <- file_to_geojson(p, method='local', output=':memory:')
+shp <- file_to_geojson(s, method='local', output=':memory:')
 
-unlink(dir(td))
+rm (d, l, p, s, gis_at, gis_doc, links)
 unlink(temp)
+unlink(dir(td))
 setwd(wd)
 
 save.image("NOAA_GIS.RData")
