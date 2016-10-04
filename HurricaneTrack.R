@@ -130,19 +130,19 @@ m <- # create leaflet map
     addGeoJSON(ww, color = 'red', fill = FALSE) %>%
     addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
-    addGeoJSON(lin, fill = FALSE) %>%
-    addCircleMarkers(~LON, ~LAT, radius = ~SSNUM * 4, stroke = TRUE, color = ~color,
-                     opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
-                     popup = ~sprintf("Time: %s %s<br/>
-                                      Status: <strong>%s</strong><br/>
-                                      Position: %3.2f, %3.2f<br/>
-                                      Wind: %s kts<br/>
-                                      Gust: %s kts",
-                                      htmlEscape(DATELBL), htmlEscape(TIMEZONE),
-                                      htmlEscape(status),
-                                      htmlEscape(LON), htmlEscape(LAT),
-                                      htmlEscape(MAXWIND),
-                                      htmlEscape(GUST))
+    addGeoJSON(lin, weight = 2, fill = FALSE) %>%
+    addCircles(lng = ~LON, lat = ~LAT, radius = ~SSNUM * 15000, color = ~color,
+               opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
+               popup = ~sprintf("Time: %s %s<br/>
+                                 Status: <strong>%s</strong><br/>
+                                 Position: %3.2f, %3.2f<br/>
+                                 Wind: %s kts<br/>
+                                 Gust: %s kts",
+                               htmlEscape(DATELBL), htmlEscape(TIMEZONE),
+                               htmlEscape(status),
+                               htmlEscape(LON), htmlEscape(LAT),
+                               htmlEscape(MAXWIND),
+                               htmlEscape(GUST))
 
     ) %>%
     addLegend("topright", colors = pal, labels = ss, title = title)
