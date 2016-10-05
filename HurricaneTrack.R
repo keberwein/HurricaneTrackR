@@ -1,13 +1,11 @@
 # Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
-# Requires devtools::install_github('rstudio/leaflet')
+# ? Requires devtools::install_github('rstudio/leaflet')
 
 # Check for required packages, install them if not installed
-pkgs <-c('XML', 'plyr', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
+pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
 for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm(p, pkgs)
-
-library(leaflet)
 
 stormname = "MATTHEW"
 
@@ -103,12 +101,22 @@ if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
 } else {
     load("/tmp/NOAA_GIS.Rdata")
+<<<<<<< HEAD
     # repull GIS data if not current
     if (advnum != storm$ADVISNUM[1]) {
         getStorm(stormname)
     } else {
         message("Using exsiting GIS data")
     }
+=======
+}
+
+# repull GIS data if not current
+if (advnum != storm$ADVISNUM[1]) {
+    getStorm(stormname)
+} else {
+    print("Using exsiting GIS data")
+>>>>>>> kmatt/master
 }
 
 # storm scale
