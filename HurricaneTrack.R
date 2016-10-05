@@ -8,11 +8,13 @@ for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character
 rm(p, pkgs)
 
 stormname = "MATTHEW"
+if (is.null(stormname)) {
+    message("Please specify a valid storm name.")
+    quit(status = 1)
+}
+stormname <- as.character(toupper(stormname))
 
 getCurrentAdv <- function(stormname) {
-    if (is.null(stormname)){message("Please specify a valid storm name.")}
-    stormname <- as.character(toupper(stormname))
-
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
     links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
@@ -118,7 +120,8 @@ storm$status <- paste(storm$TCDVLP, storm$SSNUM, sep='-')
 storm$color <- as.character(factor(storm$status, levels = ss, labels = pal))
 storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
-title = paste("Advisory", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
+title = paste("Storm", stormname, sep = " ")
+atime = paste("Adv", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
 rtime = paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
 
 m <- # create leaflet map
@@ -149,6 +152,7 @@ m <- # create leaflet map
 
     ) %>%
     addLegend("topright", colors = pal, labels = ss, title = title) %>%
+    addLegend("topright", colors = NULL, labels = NULL, title = atime) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = rtime)
 
 if (interactive()) {
