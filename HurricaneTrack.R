@@ -101,25 +101,11 @@ if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
 } else {
     load("/tmp/NOAA_GIS.Rdata")
-<<<<<<< HEAD
-    # repull GIS data if not current
-    if (advnum != storm$ADVISNUM[1]) {
-        getStorm(stormname)
-    } else {
-        message("Using exsiting GIS data")
-    }
-=======
 }
 
 # repull GIS data if not current
 if (advnum != storm$ADVISNUM[1]) {
     getStorm(stormname)
-<<<<<<< HEAD
-} else {
-    print("Using exsiting GIS data")
->>>>>>> kmatt/master
-=======
->>>>>>> kmatt/master
 }
 
 # storm scale
