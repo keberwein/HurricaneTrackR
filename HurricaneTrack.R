@@ -1,6 +1,13 @@
 # Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
 # ? Requires devtools::install_github('rstudio/leaflet')
 
+options(error = quote({
+  dump.frames(to.file=T, dumpto='R.dump')
+  load('R.dump.rda')
+  print(R.dump)
+  q()
+}))
+
 # Check for required packages, install them if not installed
 pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
 for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
@@ -137,7 +144,7 @@ m <- # create leaflet map
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
     addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
-    addCircles(lng = ~LON, lat = ~LAT, radius = ~SSNUM * 15000, color = ~color,
+    addCircles(lng = ~LON, lat = ~LAT, radius = ~MAXWIND * 250, color = ~color,
                opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
                popup = ~sprintf("Time: %s %s<br/>
                                  Status: <strong>%s</strong><br/>
