@@ -30,7 +30,7 @@ getCurrentAdv <- function(stormname) {
 }
 
 getStorm <- function(stormname) {
-    print("Getting NOAA GIS data")
+    message("Getting NOAA GIS data")
     wd <- getwd()
     td <- tempdir()
     setwd(td)
@@ -106,6 +106,8 @@ if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
 # repull GIS data if not current
 if (advnum != storm$ADVISNUM[1]) {
     getStorm(stormname)
+} else {
+    message("Using existing NOAA data")
 }
 
 # storm scale
@@ -126,7 +128,8 @@ m <- # create leaflet map
     addWMSTiles(
         "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
         layers = "nexrad-n0r-900913",
-        options = WMSTileOptions(format = "image/png", transparent = TRUE)
+        options = WMSTileOptions(format = "image/png", transparent = TRUE),
+        attribution = "Weather data © 2012 IEM Nexrad"
     ) %>%
     addGeoJSON(ww, color = 'red', fill = FALSE) %>%
     addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
