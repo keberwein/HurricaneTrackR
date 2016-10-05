@@ -95,6 +95,8 @@ getStorm <- function(stormname) {
 advnum <- getCurrentAdv(stormname)
 if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
+} else {
+    load("/tmp/NOAA_GIS.Rdata")
 }
 
 # repull GIS data if not current
@@ -102,7 +104,6 @@ if (advnum != storm$ADVISNUM[1]) {
     getStorm(stormname)
 } else {
     print("Using exsiting GIS data")
-    load("/tmp/NOAA_GIS.Rdata")
 }
 
 # storm scale
