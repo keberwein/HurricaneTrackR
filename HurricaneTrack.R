@@ -10,9 +10,9 @@ rm(p, pkgs)
 stormname = "MATTHEW"
 
 getCurrentAdv <- function(stormname) {
-    # Check for correct user input.
     if (is.null(stormname)){message("Please specify a valid storm name.")}
     stormname <- as.character(toupper(stormname))
+
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
     links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
@@ -96,7 +96,6 @@ getStorm <- function(stormname) {
 
 
 # load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
-advnum <- getCurrentAdv(stormname)
 if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
 } else {
@@ -104,6 +103,7 @@ if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
 }
 
 # pull GIS data if not current
+advnum <- getCurrentAdv(stormname)
 if (advnum != storm$ADVISNUM[1]) {
     getStorm(stormname)
 }
@@ -119,11 +119,10 @@ storm$color <- as.character(factor(storm$status, levels = ss, labels = pal))
 storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
 title = paste("Advisory", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
-
-footer = paste("NEXRAD", format(Sys.time(), "%H:%M"), sep = " ")
+rtime = paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
 
 m <- # create leaflet map
-    leaflet(data=storm, width=1024, height=768) %>%
+    leaflet(data=storm) %>%
     addTiles(options = tileOptions(detectRetina = TRUE)) %>%
     addWMSTiles(
         "http://nowcoast.noaa.gov/arcgis/services/nowcoast/radar_meteo_imagery_nexrad_time/MapServer/WmsServer",
@@ -150,7 +149,7 @@ m <- # create leaflet map
 
     ) %>%
     addLegend("topright", colors = pal, labels = ss, title = title) %>%
-    addLegend("topright", colors = NULL, labels = NULL, title = footer)
+    addLegend("topright", colors = NULL, labels = NULL, title = rtime)
 
 if (interactive()) {
     html_print(m)
