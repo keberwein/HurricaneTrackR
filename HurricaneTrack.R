@@ -8,11 +8,13 @@ for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character
 rm(p, pkgs)
 
 stormname = "MATTHEW"
+if (is.null(stormname)) {
+    message("Please specify a valid storm name.")
+    quit(status = 1)
+}
+stormname <- as.character(toupper(stormname))
 
 getCurrentAdv <- function(stormname) {
-    # Check for correct user input.
-    if (is.null(stormname)){message("Please specify a valid storm name.")}
-    stormname <- as.character(toupper(stormname))
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
     links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
@@ -30,7 +32,7 @@ getCurrentAdv <- function(stormname) {
 }
 
 getStorm <- function(stormname) {
-    print("Getting NOAA GIS data")
+    message("Getting NOAA GIS data")
     wd <- getwd()
     td <- tempdir()
     setwd(td)
@@ -96,14 +98,14 @@ getStorm <- function(stormname) {
 
 
 # load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
-advnum <- getCurrentAdv(stormname)
 if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
 } else {
     load("/tmp/NOAA_GIS.Rdata")
 }
 
-# repull GIS data if not current
+# pull GIS data if not current
+advnum <- getCurrentAdv(stormname)
 if (advnum != storm$ADVISNUM[1]) {
     getStorm(stormname)
 }
@@ -118,19 +120,22 @@ storm$status <- paste(storm$TCDVLP, storm$SSNUM, sep='-')
 storm$color <- as.character(factor(storm$status, levels = ss, labels = pal))
 storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
-title = paste("Advisory", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
+title = paste("Storm", stormname, sep = " ")
+atime = paste("Adv", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
+rtime = paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
 
 m <- # create leaflet map
-    leaflet(data=storm, width=1024, height=768) %>%
-    addTiles() %>%
+    leaflet(data=storm) %>%
+    addTiles(options = tileOptions(detectRetina = TRUE)) %>%
     addWMSTiles(
-        "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
-        layers = "nexrad-n0r-900913",
-        options = WMSTileOptions(format = "image/png", transparent = TRUE)
+        "http://nowcoast.noaa.gov/arcgis/services/nowcoast/radar_meteo_imagery_nexrad_time/MapServer/WmsServer",
+        layers = "1",
+        options = WMSTileOptions(format = "image/png", transparent = TRUE),
+        attribution = "Weather data: nowcoast.noaa.gov"
     ) %>%
     addGeoJSON(ww, color = 'red', fill = FALSE) %>%
-    addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
+    addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
     addCircles(lng = ~LON, lat = ~LAT, radius = ~SSNUM * 15000, color = ~color,
                opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
@@ -146,7 +151,12 @@ m <- # create leaflet map
                                htmlEscape(GUST))
 
     ) %>%
-    addLegend("topright", colors = pal, labels = ss, title = title)
+    addLegend("topright", colors = pal, labels = ss, title = title) %>%
+    addLegend("topright", colors = NULL, labels = NULL, title = atime) %>%
+    addLegend("topright", colors = NULL, labels = NULL, title = rtime)
 
-html_print(m)
-#saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
+if (interactive()) {
+    html_print(m)
+} else {
+    saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
+}
