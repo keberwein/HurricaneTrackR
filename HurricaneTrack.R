@@ -120,9 +120,11 @@ storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
 title = paste("Advisory", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
 
+footer = paste("NEXRAD", format(Sys.time(), "%H:%M"), sep = " ")
+
 m <- # create leaflet map
     leaflet(data=storm, width=1024, height=768) %>%
-    addTiles() %>%
+    addTiles(options = tileOptions(detectRetina = TRUE)) %>%
     addWMSTiles(
         "http://nowcoast.noaa.gov/arcgis/services/nowcoast/radar_meteo_imagery_nexrad_time/MapServer/WmsServer",
         layers = "1",
@@ -130,8 +132,8 @@ m <- # create leaflet map
         attribution = "Weather data: nowcoast.noaa.gov"
     ) %>%
     addGeoJSON(ww, color = 'red', fill = FALSE) %>%
-    addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
+    addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
     addCircles(lng = ~LON, lat = ~LAT, radius = ~SSNUM * 15000, color = ~color,
                opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
@@ -147,7 +149,11 @@ m <- # create leaflet map
                                htmlEscape(GUST))
 
     ) %>%
-    addLegend("topright", colors = pal, labels = ss, title = title)
+    addLegend("topright", colors = pal, labels = ss, title = title) %>%
+    addLegend("topright", colors = NULL, labels = NULL, title = footer)
 
-html_print(m)
-#saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
+if (interactive()) {
+    html_print(m)
+} else {
+    saveWidget(m, '/var/www/html/trackr.html', selfcontained = FALSE)
+}
