@@ -1,5 +1,6 @@
 # Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
-# ? Requires devtools::install_github('rstudio/leaflet')
+
+stormname = "MATTHEW"
 
 # Check for required packages, install them if not installed
 pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
@@ -7,10 +8,9 @@ for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.pack
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm(p, pkgs)
 
-stormname = "MATTHEW"
 if (is.null(stormname)) {
     message("Please specify a valid storm name.")
-    quit(status = 1)
+    quit(save = "no", status = 1)
 }
 stormname <- as.character(toupper(stormname))
 
@@ -22,7 +22,10 @@ getCurrentAdv <- function(stormname) {
 
     # keep only Advisory shapefile links
     links <- links[grep(paste("Advisory [#0-9A-Z]+ Forecast \\[shp\\] - [a-z A-Z]+", stormname, sep = " "), links$title),]
-    if (nrow(links) == 0) {message("Data not found. Please check for valid spelling of storm name and is a current storm.")}
+    if (nrow(links) == 0) {
+        message("Check for valid spelling of storm name and is a current storm")
+        quit(save = "no", status = 1)
+    }
 
     adv <- regmatches(links$title, regexpr('#[0-9]+[A-Z]?', links$title))
     adv <- sub("#0?", "", adv)
@@ -42,6 +45,10 @@ getStorm <- function(stormname) {
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
     links <<- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
+    if (nrow(links) == 0) {
+        message("Storm data not found")
+        quit(save = "no", status = 1)
+    }
 
     # get advisory shapefile links
     adv <- links[grep("Advisory [#0-9A-Z]+ Forecast \\[shp\\]", links$title),]
