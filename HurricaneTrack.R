@@ -114,20 +114,6 @@ m <- # create leaflet map
     ) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
-    addCircles(lng = ~LON, lat = ~LAT, radius = ~MAXWIND * 250, color = ~color,
-               opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
-               popup = ~sprintf("Time: %s %s<br/>
-                                 Status: <strong>%s</strong><br/>
-                                 Position: %3.2f, %3.2f<br/>
-                                 Wind: %s kts<br/>
-                                 Gust: %s kts",
-                               htmlEscape(DATELBL), htmlEscape(TIMEZONE),
-                               htmlEscape(status),
-                               htmlEscape(LON), htmlEscape(LAT),
-                               htmlEscape(MAXWIND),
-                               htmlEscape(GUST))
-
-    ) %>%
     addLegend("bottomright", colors = pal, labels = ss, title = title) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = atime) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = rtime)
@@ -140,6 +126,21 @@ if (exists("radii")) {
 if (exists("ww")) {
     m <- addGeoJSON(m, ww, color = 'red', fill = FALSE)
 }
+
+m <- addCircles(m, lng = ~LON, lat = ~LAT, radius = ~MAXWIND * 250, color = ~color,
+           opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
+           popup = ~sprintf("Time: %s %s<br/>
+                            Status: <strong>%s</strong><br/>
+                            Position: %3.2f, %3.2f<br/>
+                            Wind: %s kts<br/>
+                            Gust: %s kts",
+                            htmlEscape(DATELBL), htmlEscape(TIMEZONE),
+                            htmlEscape(status),
+                            htmlEscape(LON), htmlEscape(LAT),
+                            htmlEscape(MAXWIND),
+                            htmlEscape(GUST))
+
+)
 
 if (interactive()) {
     html_print(m)
