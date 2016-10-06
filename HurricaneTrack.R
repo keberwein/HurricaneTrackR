@@ -1,13 +1,6 @@
 # Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
 # ? Requires devtools::install_github('rstudio/leaflet')
 
-options(error = quote({
-  dump.frames(to.file=T, dumpto='R.dump')
-  load('R.dump.rda')
-  print(R.dump)
-  q()
-}))
-
 # Check for required packages, install them if not installed
 pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
 for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
@@ -28,7 +21,7 @@ getCurrentAdv <- function(stormname) {
 
     # keep only Advisory shapefile links
     links <- links[grep(paste("Advisory [#0-9A-Z]+ Forecast \\[shp\\] - [a-z A-Z]+", stormname, sep = " "), links$title),]
-    if (nrow(links)==0) {message("Data not found. Please chedk for valid spelling of storm name and is a current storm.")}
+    if (nrow(links) == 0) {message("Data not found. Please check for valid spelling of storm name and is a current storm.")}
 
     adv <- regmatches(links$title, regexpr('#[0-9]+[A-Z]?', links$title))
     adv <- sub("#0?", "", adv)
@@ -59,10 +52,10 @@ getStorm <- function(stormname) {
     #l <- select.list(adv$title, title="Select storm:", graphics = FALSE)
     #adv$link[adv$title == l]
 
-    url <- adv$link[grep(stormname, adv$title)]
+    surl <- adv$link[grep(stormname, adv$title)]
 
     temp <- tempfile(fileext = ".zip")
-    download.file(url, temp)
+    download.file(surl, temp)
     unzip(temp)
     unlink(temp)
 
@@ -82,20 +75,23 @@ getStorm <- function(stormname) {
 
     # get wind shapefile links
     wnd <- links[grep("Advisory [#0-9A-Z]+ Wind Field \\[shp\\]", links$title),]
-    url <- wnd$link[grep(stormname, wnd$title)]
+    wurl <- wnd$link[grep(stormname, wnd$title)]
 
-    temp <- tempfile(fileext = ".zip")
-    download.file(url, temp)
-    unzip(temp)
-    unlink(temp)
+    # not all advisories have wind radius data
+    if (length(wurl) > 0) {
+        temp <- tempfile(fileext = ".zip")
+        download.file(wurl, temp)
+        unzip(temp)
+        unlink(temp)
 
-    d <- dir(td, "*_forecastradii.dbf$")
-    s <- dir(td, "*_forecastradii.shp$")
+        d <- dir(td, "*_forecastradii.dbf$")
+        s <- dir(td, "*_forecastradii.shp$")
 
-    wind <<- read.dbf(d)
-    radii <<- file_to_geojson(s, method='local', output=':memory:')
+        wind <<- read.dbf(d)
+        radii <<- file_to_geojson(s, method='local', output=':memory:')
 
-    rm(d, s, wnd)
+        rm(d, s, wnd)
+    }
 
     unlink(dir(td))
     setwd(wd)
@@ -142,7 +138,6 @@ m <- # create leaflet map
     ) %>%
     addGeoJSON(ww, color = 'red', fill = FALSE) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
-    addGeoJSON(radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
     addCircles(lng = ~LON, lat = ~LAT, radius = ~MAXWIND * 250, color = ~color,
                opacity = 1, weight = 2, fill = TRUE, fillColor = ~color,
@@ -161,6 +156,11 @@ m <- # create leaflet map
     addLegend("topright", colors = pal, labels = ss, title = title) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = atime) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = rtime)
+
+# add wind radii if available in advisory
+if (exists("radii")) {
+    m <- addGeoJSON(m, radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1)
+}
 
 if (interactive()) {
     html_print(m)
