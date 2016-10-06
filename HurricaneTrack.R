@@ -10,27 +10,6 @@ rm(p, pkgs)
 
 stormname <- as.character(toupper(stormname))
 
-# get current Advisory number
-getCurrentAdv <- function(stormname) {
-    gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
-    gis_doc <- xmlParse(gis_at)
-    links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
-
-    # keep only Advisory shapefile links
-    links <- links[grep(paste("Advisory [#0-9A-Z]+ Forecast \\[shp\\] - [a-z A-Z]+", stormname, sep = " "), links$title),]
-    if (nrow(links) == 0) {
-        message("Check for valid spelling of storm name and is a current storm")
-        quit(save = "no", status = 1)
-    }
-
-    adv <- regmatches(links$title, regexpr('#[0-9]+[A-Z]?', links$title))
-    adv <- sub("#0?", "", adv)
-
-    message(paste("Current advisory", adv, sep = " "))
-
-    return(adv)
-}
-
 # get GIS shapefile data and create Rdata bundle
 getStorm <- function(stormname) {
     message("Getting NOAA GIS data")
@@ -38,6 +17,7 @@ getStorm <- function(stormname) {
     td <- tempdir()
     setwd(td)
 
+    message("Getting file links")
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
     links <<- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
@@ -48,15 +28,14 @@ getStorm <- function(stormname) {
 
     # get advisory shapefile links
     adv <- links[grep("Advisory [#0-9A-Z]+ Forecast \\[shp\\]", links$title),]
-    # cleanup titles for menu
-    adv$title <- gsub('\\[shp\\] ', "", adv$title)
-    # add advisory number
-    adv$advisory <- regmatches(adv$title, regexpr('#[0-9]+[A-Z]?', adv$title))
+    adv <- adv[grep(stormname, adv$title),]
 
-    ## interactive storm selection
-    #l <- select.list(adv$title, title="Select storm:", graphics = FALSE)
-    #adv$link[adv$title == l]
+    # get advisory number
+    advnum <<- regmatches(adv$title, regexpr('#[0-9]+[A-Z]?', adv$title))
+    advnum <<- sub("#0?", "", advnum)
+    message(paste("Current advisory", advnum, sep = " "))
 
+    # get url for storm files
     surl <- adv$link[grep(stormname, adv$title)]
 
     temp <- tempfile(fileext = ".zip")
@@ -74,9 +53,11 @@ getStorm <- function(stormname) {
     lin <<- file_to_geojson(l, method='local', output=':memory:')
     pts <<- file_to_geojson(p, method='local', output=':memory:')
     shp <<- file_to_geojson(s, method='local', output=':memory:')
-    ww  <<- file_to_geojson(w, method='local', output=':memory:')
-
-    rm(d, l, p, s, w, gis_at, gis_doc, adv)
+    # check for watches and warning data
+    if (length(w) > 0) {
+        message("Watches/Warnings present")
+        ww  <<- file_to_geojson(w, method='local', output=':memory:')
+    }
 
     # get wind shapefile links
     wnd <- links[grep("Advisory [#0-9A-Z]+ Wind Field \\[shp\\]", links$title),]
@@ -97,7 +78,6 @@ getStorm <- function(stormname) {
         wind <<- read.dbf(d)
         radii <<- file_to_geojson(s, method='local', output=':memory:')
 
-        rm(d, s, wnd)
     } else {
         message("No link for wind radii")
     }
@@ -106,28 +86,11 @@ getStorm <- function(stormname) {
     setwd(wd)
 }
 
-advnum <- getCurrentAdv(stormname)
-
-# load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
-if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
-    getStorm(stormname)
-    rm(getCurrentAdv, getStorm)
-    save.image("/tmp/NOAA_GIS.Rdata")
-} else {
-    load("/tmp/NOAA_GIS.Rdata")
-}
-
-# pull GIS data if not current
-if (advnum != storm$ADVISNUM[1]) {
-    file.remove("/tmp/NOAA_GIS.Rdata")
-    getStorm(stormname)
-    rm(getCurrentAdv, getStorm)
-    save.image("/tmp/NOAA_GIS.Rdata")
-}
-
 # storm scale
-ss <-  c("Tropical Depression", "Tropical Storm", "Hurricane-1", "Hurricane-2", "Major Hurricane-3", "Major Hurricane-4", "Major Hurricane-5")
+ss <-  c("Tropical Depression", "Tropical Storm-0", "Hurricane-1", "Hurricane-2", "Major Hurricane-3", "Major Hurricane-4", "Major Hurricane-5")
 pal <- colorRampPalette(c("blue", "green", "yellow", "orange", "red", "darkred", "black"))(length(ss))
+
+getStorm(stormname)
 
 storm <- storm[order(storm$TAU),]
 
@@ -149,7 +112,6 @@ m <- # create leaflet map
         options = WMSTileOptions(format = "image/png", transparent = TRUE),
         attribution = "Weather data: nowcoast.noaa.gov"
     ) %>%
-    addGeoJSON(ww, color = 'red', fill = FALSE) %>%
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
     addCircles(lng = ~LON, lat = ~LAT, radius = ~MAXWIND * 250, color = ~color,
@@ -173,6 +135,10 @@ m <- # create leaflet map
 # add wind radii if available in advisory
 if (exists("radii")) {
     m <- addGeoJSON(m, radii, color = 'grey', opacity = 1, stroke = TRUE, weight = 1)
+}
+
+if (exists("ww")) {
+    m <- addGeoJSON(m, ww, color = 'red', fill = FALSE)
 }
 
 if (interactive()) {
