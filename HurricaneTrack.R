@@ -14,6 +14,7 @@ if (is.null(stormname)) {
 }
 stormname <- as.character(toupper(stormname))
 
+# get current Advisory number
 getCurrentAdv <- function(stormname) {
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
@@ -31,6 +32,7 @@ getCurrentAdv <- function(stormname) {
     return(adv)
 }
 
+# get GIS shapefile data and create Rdata bundle
 getStorm <- function(stormname) {
     message("Getting NOAA GIS data")
     wd <- getwd()
@@ -99,6 +101,7 @@ getStorm <- function(stormname) {
     save.image("/tmp/NOAA_GIS.Rdata")
 }
 
+advnum <- getCurrentAdv(stormname)
 
 # load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
 if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
@@ -108,8 +111,8 @@ if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
 }
 
 # pull GIS data if not current
-advnum <- getCurrentAdv(stormname)
 if (advnum != storm$ADVISNUM[1]) {
+    file.remove("/tmp/NOAA_GIS.Rdata")
     getStorm(stormname)
 }
 
@@ -125,6 +128,7 @@ storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
 
 title = paste("Storm", stormname, sep = " ")
 atime = paste("Adv", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
+if (!exists("radii")) { atime = paste(atime, "(no winds)", sep = " ")}
 rtime = paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
 
 m <- # create leaflet map
@@ -153,7 +157,7 @@ m <- # create leaflet map
                                htmlEscape(GUST))
 
     ) %>%
-    addLegend("topright", colors = pal, labels = ss, title = title) %>%
+    addLegend("bottomright", colors = pal, labels = ss, title = title) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = atime) %>%
     addLegend("topright", colors = NULL, labels = NULL, title = rtime)
 
