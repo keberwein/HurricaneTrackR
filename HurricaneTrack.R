@@ -8,10 +8,6 @@ for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.pack
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm(p, pkgs)
 
-if (is.null(stormname)) {
-    message("Please specify a valid storm name.")
-    quit(save = "no", status = 1)
-}
 stormname <- as.character(toupper(stormname))
 
 # get current Advisory number
@@ -88,6 +84,8 @@ getStorm <- function(stormname) {
 
     # not all advisories have wind radius data
     if (length(wurl) > 0) {
+        message("Getting NOAA wind data")
+
         temp <- tempfile(fileext = ".zip")
         download.file(wurl, temp)
         unzip(temp)
@@ -100,12 +98,12 @@ getStorm <- function(stormname) {
         radii <<- file_to_geojson(s, method='local', output=':memory:')
 
         rm(d, s, wnd)
+    } else {
+        message("No link for wind radii")
     }
 
     unlink(dir(td))
     setwd(wd)
-
-    save.image("/tmp/NOAA_GIS.Rdata")
 }
 
 advnum <- getCurrentAdv(stormname)
@@ -113,6 +111,8 @@ advnum <- getCurrentAdv(stormname)
 # load local GIS data to save time pulling infrequent GIS updates, but keep NEXRAD data current
 if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
     getStorm(stormname)
+    rm(getCurrentAdv, getStorm)
+    save.image("/tmp/NOAA_GIS.Rdata")
 } else {
     load("/tmp/NOAA_GIS.Rdata")
 }
@@ -121,6 +121,8 @@ if (!file.exists("/tmp/NOAA_GIS.Rdata")) {
 if (advnum != storm$ADVISNUM[1]) {
     file.remove("/tmp/NOAA_GIS.Rdata")
     getStorm(stormname)
+    rm(getCurrentAdv, getStorm)
+    save.image("/tmp/NOAA_GIS.Rdata")
 }
 
 # storm scale
