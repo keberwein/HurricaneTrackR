@@ -12,7 +12,6 @@ stormname <- as.character(toupper(stormname))
 
 # get GIS shapefile data and create Rdata bundle
 getStorm <- function(stormname) {
-    message("Getting NOAA GIS data")
     wd <- getwd()
     td <- tempdir()
     setwd(td)
@@ -27,6 +26,7 @@ getStorm <- function(stormname) {
     }
 
     # get advisory shapefile links
+    message("Getting NOAA GIS data")
     adv <- links[grep("Advisory [#0-9A-Z]+ Forecast \\[shp\\]", links$title),]
     adv <- adv[grep(stormname, adv$title),]
 
