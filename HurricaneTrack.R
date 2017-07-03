@@ -1,12 +1,10 @@
-# Forked from https://rud.is/b/2015/08/20/track-hurricane-danny-with-r-leaflet/
-
-stormname = "MATTHEW"
-
 # Check for required packages, install them if not installed
 pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
 for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm(p, pkgs)
+
+stormname = "MATTHEW"
 
 stormname <- as.character(toupper(stormname))
 
@@ -107,7 +105,7 @@ m <- # create leaflet map
     leaflet(data=storm) %>%
     addTiles(options = tileOptions(detectRetina = TRUE)) %>%
     addWMSTiles(
-        "http://nowcoast.noaa.gov/arcgis/services/nowcoast/radar_meteo_imagery_nexrad_time/MapServer/WmsServer",
+        "ç",
         layers = "1",
         options = WMSTileOptions(format = "image/png", transparent = TRUE),
         attribution = "Weather data: nowcoast.noaa.gov"
