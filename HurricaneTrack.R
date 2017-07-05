@@ -18,10 +18,6 @@ getStorm <- function(stormname) {
     gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
     gis_doc <- xmlParse(gis_at)
     links <<- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
-    if (nrow(links) == 0) {
-        message("Storm data not found")
-        quit(save = "no", status = 1)
-    }
 
     # get advisory shapefile links
     message("Getting NOAA GIS data")
