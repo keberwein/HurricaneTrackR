@@ -11,13 +11,19 @@ stormname <- as.character(toupper(stormname))
 # get GIS shapefile data and create Rdata bundle
 getStorm <- function(stormname) {
     wd <- getwd()
-    td <- tempdir()
+    td <- getwd()
+    #td <- tempdir()
     setwd(td)
 
     message("Getting file links")
-    gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
+    #gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
+    gis_at <- read_xml("al142016-032_5day_pts.shp.xml")
     gis_doc <- xmlParse(gis_at)
     links <<- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
+    if (nrow(links) == 0) {
+        message("Storm data not found")
+        quit(save = "no", status = 1)
+    }
 
     # get advisory shapefile links
     message("Getting NOAA GIS data")
