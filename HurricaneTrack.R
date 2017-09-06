@@ -95,7 +95,7 @@ getStorm(stormname)
 # Parse dates and times.
 date_dt <- str_sub(storm$ADVDATE, -11) %>% as.Date("%b %d %Y") %>% as.character()
 time_ast <- str_sub(storm$ADVDATE, 1, -20)
-ifelse(length(time_ast) == 8, time_ast <- paste0("0", time_ast), time_ast)
+ifelse(as.numeric(str_sub(time_ast, 1,4)) < 1000, time_ast <- paste0("0", time_ast), time_ast)
 time_ast <- str_sub(strptime(time_ast, "%I%M %p" ), -8)
 
 # Arrange and add a few new columns.
