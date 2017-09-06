@@ -9,6 +9,9 @@ for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character
 rm(p, pkgs)
 
 # get GIS shapefile data and create Rdata bundle
+stormname <- "Irma"
+
+# get GIS shapefile data and create Rdata bundle
 getStorm <- function(stormname) {
     wd <- getwd()
     td <- tempdir()
@@ -47,13 +50,13 @@ getStorm <- function(stormname) {
     w <- dir(td, "*_wwlin.shp$")
     
     storm <<- read.dbf(d)
-    lin <- file_to_geojson(l, method='local', output=':memory:')
-    pts <- file_to_geojson(p, method='local', output=':memory:')
-    shp <- file_to_geojson(s, method='local', output=':memory:')
+    lin <<- file_to_geojson(l, method='local', output=':memory:')
+    pts <<- file_to_geojson(p, method='local', output=':memory:')
+    shp <<- file_to_geojson(s, method='local', output=':memory:')
     # check for watches and warning data
     if (length(w) > 0) {
         message("Watches/Warnings present")
-        ww  <- file_to_geojson(w, method='local', output=':memory:')
+        ww  <<- file_to_geojson(w, method='local', output=':memory:')
     }
     
     # get wind shapefile links
@@ -72,8 +75,8 @@ getStorm <- function(stormname) {
         d <- dir(td, "*_forecastradii.dbf$")
         s <- dir(td, "*_forecastradii.shp$")
         
-        wind <- read.dbf(d)
-        radii <- file_to_geojson(s, method='local', output=':memory:')
+        wind <<- read.dbf(d)
+        radii <<- file_to_geojson(s, method='local', output=':memory:')
         
     } else {
         message("No link for wind radii")
@@ -99,10 +102,11 @@ time_ast <- str_sub(strptime(time_ast, "%I%M %p" ), -8)
 storm <- storm %>% arrange(TAU) %>% 
     mutate(status = paste(TCDVLP, SSNUM, sep='-'),
            color = as.character(factor(status, levels = ss, labels = pal)),
+           # AST timezone is not in base R, but has the same offset as EST.
            advisory = ymd_hms(paste0(date_dt, " ", time_ast), tz="US/Eastern"))
 
 title <- paste("Storm", stormname, sep = " ")
-atime <- paste("Adv", storm$ADVISNUM[1], as.character(storm$advisory[1]), "EST", sep = " ")
+atime <- paste("Adv", storm$ADVISNUM[1], as.character(storm$advisory[1]), "AST", sep = " ")
 if (!exists("radii")) { atime = paste(atime, "(no winds)", sep = " ")}
 rtime <- paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
 
@@ -118,8 +122,8 @@ m <- # create leaflet map
     addGeoJSON(shp, stroke = TRUE, color = 'grey', fill = FALSE) %>%
     addGeoJSON(lin, weight = 2, fill = FALSE) %>%
     addLegend("bottomright", colors = pal, labels = ss, title = title) %>%
-    addLegend("topright", colors = NULL, labels = NULL, title = atime) %>%
-    addLegend("topright", colors = NULL, labels = NULL, title = rtime)
+    addLegend("topright", colors = list(), labels = list(), title = atime) %>%
+    addLegend("topright", colors = list(), labels = list(), title = rtime)
 
 # add wind radii if available in advisory
 if (exists("radii")) {
