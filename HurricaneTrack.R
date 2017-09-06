@@ -3,7 +3,7 @@
 stormname <- "Irma"
 
 # Check for required packages, install them if not installed
-pkgs <-c('XML', 'plyr', 'leaflet', 'htmltools', 'htmlwidgets', 'RColorBrewer', 'rvest', 'foreign', 'geojsonio')
+pkgs <-c('XML', 'dplyr', 'leaflet', 'htmltools', 'rvest', 'foreign', 'geojsonio', 'lubridate', 'stringr')
 for(p in pkgs) if(p %in% rownames(installed.packages()) == FALSE) { install.packages(p) }
 for(p in pkgs) suppressPackageStartupMessages(library(p, quietly=TRUE, character.only=TRUE))
 rm(p, pkgs)
@@ -15,9 +15,8 @@ getStorm <- function(stormname) {
     setwd(td)
     
     message("Getting file links")
-    gis_at <- read_xml("http://www.nhc.noaa.gov/gis-at.xml")
-    gis_doc <- xmlParse(gis_at)
-    links <<- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
+    gis_doc <- read_xml("http://www.nhc.noaa.gov/gis-at.xml") %>% xmlParse()
+    links <- xmlToDataFrame(gis_doc, nodes=getNodeSet(gis_doc, "//item"))
     if (nrow(links) == 0) {
         message("Storm data not found")
         quit(save = "no", status = 1)
@@ -29,8 +28,8 @@ getStorm <- function(stormname) {
     adv <- adv[grep(stormname, adv$title),]
     
     # get advisory number
-    advnum <<- regmatches(adv$title, regexpr('#[0-9]+[A-Z]?', adv$title))
-    advnum <<- sub("#0?", "", advnum)
+    advnum <- regmatches(adv$title, regexpr('#[0-9]+[A-Z]?', adv$title))
+    advnum <- sub("#0?", "", advnum)
     message(paste("Current advisory", advnum, sep = " "))
     
     # get url for storm files
@@ -48,13 +47,13 @@ getStorm <- function(stormname) {
     w <- dir(td, "*_wwlin.shp$")
     
     storm <<- read.dbf(d)
-    lin <<- file_to_geojson(l, method='local', output=':memory:')
-    pts <<- file_to_geojson(p, method='local', output=':memory:')
-    shp <<- file_to_geojson(s, method='local', output=':memory:')
+    lin <- file_to_geojson(l, method='local', output=':memory:')
+    pts <- file_to_geojson(p, method='local', output=':memory:')
+    shp <- file_to_geojson(s, method='local', output=':memory:')
     # check for watches and warning data
     if (length(w) > 0) {
         message("Watches/Warnings present")
-        ww  <<- file_to_geojson(w, method='local', output=':memory:')
+        ww  <- file_to_geojson(w, method='local', output=':memory:')
     }
     
     # get wind shapefile links
@@ -73,8 +72,8 @@ getStorm <- function(stormname) {
         d <- dir(td, "*_forecastradii.dbf$")
         s <- dir(td, "*_forecastradii.shp$")
         
-        wind <<- read.dbf(d)
-        radii <<- file_to_geojson(s, method='local', output=':memory:')
+        wind <- read.dbf(d)
+        radii <- file_to_geojson(s, method='local', output=':memory:')
         
     } else {
         message("No link for wind radii")
@@ -90,16 +89,22 @@ pal <- colorRampPalette(c("blue", "green", "yellow", "orange", "red", "darkred",
 
 getStorm(stormname)
 
-storm <- storm[order(storm$TAU),]
+# Parse dates and times.
+date_dt <- str_sub(storm$ADVDATE, -11) %>% as.Date("%b %d %Y") %>% as.character()
+time_ast <- str_sub(storm$ADVDATE, 1, -20)
+ifelse(length(time_ast) == 8, time_ast <- paste0("0", time_ast), time_ast)
+time_ast <- str_sub(strptime(time_ast, "%I%M %p" ), -8)
 
-storm$status <- paste(storm$TCDVLP, storm$SSNUM, sep='-')
-storm$color <- as.character(factor(storm$status, levels = ss, labels = pal))
-storm$advisory <- as.POSIXct(storm$ADVDATE, format='%y%m%d/%H%M')
+# Arrange and add a few new columns.
+storm <- storm %>% arrange(TAU) %>% 
+    mutate(status = paste(TCDVLP, SSNUM, sep='-'),
+           color = as.character(factor(status, levels = ss, labels = pal)),
+           advisory = ymd_hms(paste0(date_dt, " ", time_ast), tz="US/Eastern"))
 
-title = paste("Storm", stormname, sep = " ")
-atime = paste("Adv", storm$ADVISNUM[1], as.character(format(storm$advisory[1], "%b %d %H:%M")), "GMT", sep = " ")
+title <- paste("Storm", stormname, sep = " ")
+atime <- paste("Adv", storm$ADVISNUM[1], as.character(storm$advisory[1]), "EST", sep = " ")
 if (!exists("radii")) { atime = paste(atime, "(no winds)", sep = " ")}
-rtime = paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
+rtime <- paste("NEXRAD", format(Sys.time(), "%r"), sep = " ")
 
 m <- # create leaflet map
     leaflet(data=storm) %>%
@@ -135,10 +140,9 @@ m <- addCircles(m, lng = ~LON, lat = ~LAT, radius = ~MAXWIND * 250, color = ~col
                                  htmlEscape(DATELBL), htmlEscape(TIMEZONE),
                                  htmlEscape(status),
                                  htmlEscape(LON), htmlEscape(LAT),
-                                 htmlEscape(MAXWIND),
-                                 htmlEscape(GUST))
-                
-)
+                                 htmlEscape(round(MAXWIND*1.15077945), 0),
+                                 htmlEscape(round(GUST*1.15077945), 0))) %>%
+    setView(-75, 21, 5)
 
 if (interactive()) {
     html_print(m)
